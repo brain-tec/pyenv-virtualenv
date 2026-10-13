@@ -110,6 +110,18 @@ set -gx PATH '${PYENV_VIRTUALENV_ROOT:-${PYENV_VIRTUALENV_INSTALL_PREFIX}}/shims
 set -gx PYENV_VIRTUALENV_INIT 1;
 EOS
   ;;
+bash )
+  # The code is taken from pyenv-init, see comments there
+  cat <<EOS
+PATH="\$(bash --norc -ec 'IFS=:; paths=(\$PATH);
+for i in \${!paths[@]}; do
+if [[ \${paths[i]} == "''${PYENV_VIRTUALENV_ROOT:-${PYENV_VIRTUALENV_INSTALL_PREFIX}}/shims''" ]]; then unset '\''paths[i]'\'';
+fi; done;
+echo "\${paths[*]}"')";
+export PATH="${PYENV_VIRTUALENV_ROOT:-${PYENV_VIRTUALENV_INSTALL_PREFIX}}/shims:\${PATH}";
+export PYENV_VIRTUALENV_INIT=1;
+EOS
+  ;;
 * )
   cat <<EOS
 export PATH="${PYENV_VIRTUALENV_ROOT:-${PYENV_VIRTUALENV_INSTALL_PREFIX}}/shims:\${PATH}";
@@ -132,9 +144,11 @@ EOS
     if test -n "\$PYENV_VERSION"
       return \$ret
     end
-    if test "\$PWD" = "\$_PYENV_VH_PWD" \\
-      -a "(stat ${_stat_fmt} \$_PYENV_VH_PATHS 2>/dev/null)" = "\$_PYENV_VH_MTIMES"
-      return \$ret
+    if test "\$PWD" = "\$_PYENV_VH_PWD"
+      set -l mtimes (stat ${_stat_fmt} \$_PYENV_VH_PATHS 2>/dev/null)
+      if test (string join " " \$mtimes) = (string join " " \$_PYENV_VH_MTIMES)
+        return \$ret
+      end
     end
   end
 EOS

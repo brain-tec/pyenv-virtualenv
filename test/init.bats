@@ -46,6 +46,11 @@ load test_helper
   run pyenv-virtualenv-init - bash
   assert_success
   assert_output <<EOS
+PATH="\$(bash --norc -ec 'IFS=:; paths=(\$PATH);
+for i in \${!paths[@]}; do
+if [[ \${paths[i]} == "''${TMP}/pyenv/plugins/pyenv-virtualenv/shims''" ]]; then unset '\''paths[i]'\'';
+fi; done;
+echo "\${paths[*]}"')";
 export PATH="${TMP}/pyenv/plugins/pyenv-virtualenv/shims:\${PATH}";
 export PYENV_VIRTUALENV_INIT=1;
 _pyenv_virtualenv_hook() {
@@ -112,9 +117,11 @@ function _pyenv_virtualenv_hook --on-event fish_prompt;
     if test -n "\$PYENV_VERSION"
       return \$ret
     end
-    if test "\$PWD" = "\$_PYENV_VH_PWD" \\
-      -a "(stat ${_stat_fmt} \$_PYENV_VH_PATHS 2>/dev/null)" = "\$_PYENV_VH_MTIMES"
-      return \$ret
+    if test "\$PWD" = "\$_PYENV_VH_PWD"
+      set -l mtimes (stat ${_stat_fmt} \$_PYENV_VH_PATHS 2>/dev/null)
+      if test (string join " " \$mtimes) = (string join " " \$_PYENV_VH_MTIMES)
+        return \$ret
+      end
     end
   end
   if [ -n "\$VIRTUAL_ENV" ]
